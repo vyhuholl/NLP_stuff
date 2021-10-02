@@ -32,12 +32,15 @@ def main(dir_name: str, pattern: str, repl: str, ext: List[str]) -> None:
             )
         )
     )
+    count = 0
     for filename in files:
         if re.match(pattern, filename):
             new_filename = re.sub(pattern, repl, filename, count=1)
             src = path.join(dir_name, filename)
             dst = path.join(dir_name, new_filename)
             os.rename(src, dst)
+            count += 1
+    print(f"All done!\n{count} file{'s' if count % 10 != 1 else ''} renamed.")
 
 
 if __name__ == "__main__":
