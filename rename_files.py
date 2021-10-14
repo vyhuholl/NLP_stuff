@@ -77,11 +77,13 @@ def main(
             if verbose:
                 print(
                     emoji.emojize(
-                        f":white_check_mark: {filename} --> {new_filename}",
+                        f":white_check_mark: {filename} -> {new_filename}",
                         use_aliases=True,
                     )
                 )
             count += 1
+        if filenames and verbose:
+            print("\n")
 
     cprint(
         emoji.emojize("All done! :dizzy: :star2: :dizzy:", use_aliases=True),
