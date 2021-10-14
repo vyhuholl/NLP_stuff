@@ -68,7 +68,7 @@ def main(
         new_filenames = [
             re.sub(pattern, repl, filename, count=1) for filename in filenames
         ]
-        if filenames and verbose:
+        if filenames and verbose and len(dirs) > 1:
             cprint(dir_name, attrs=["bold"])
         for filename, new_filename in zip(filenames, new_filenames):
             src = path.join(dir_name, filename)
