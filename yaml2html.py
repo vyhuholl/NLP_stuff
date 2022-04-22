@@ -1,5 +1,5 @@
 import argparse
-from typing import Generator, Iterable, List, Optional
+from typing import Generator, Iterable, List, Optional, Type, Union
 
 import yaml
 from termcolor import colored, cprint
@@ -13,9 +13,13 @@ from yaml import (
     )
 
 try:
-    from yaml import CSafeLoader as SafeLoader
+    from yaml import (
+        CSafeLoader as SafeLoader,
+        CUnsafeLoader as UnsafeLoader,
+        CFullLoader as FullLoader,
+        )
 except ImportError:
-    from yaml import SafeLoader
+    from yaml import SafeLoader, UnsafeLoader, FullLoader
 
 OPEN_TAG_EVENTS = (ScalarEvent, SequenceStartEvent, MappingStartEvent)
 CLOSE_TAG_EVENTS = (ScalarEvent, SequenceEndEvent, MappingEndEvent)
@@ -60,6 +64,7 @@ class HTMLBuilder:
         Returns:
             None
         """
+
         if len(self._context) > 0:
             if self._context[-1] == "list":
                 self._html.append(
@@ -87,6 +92,7 @@ class HTMLBuilder:
         Returns:
             None
         """
+
         if isinstance(event, OPEN_TAG_EVENTS):
             self._handle_tag()
             if isinstance(event, ScalarEvent):
@@ -97,6 +103,7 @@ class HTMLBuilder:
             elif isinstance(event, MappingStartEvent):
                 self._html.append(self._color("<dl>"))
                 self._context.append(0)
+
         if isinstance(event, CLOSE_TAG_EVENTS):
             self._handle_tag(close=True)
             if isinstance(event, SequenceEndEvent):
@@ -107,14 +114,20 @@ class HTMLBuilder:
                 self._context.pop()
 
 
-def yaml2html(stream: str, loader=SafeLoader) -> Generator[str, None, None]:
+def yaml2html(
+    stream: str, loader: Union[
+        Type[yaml.CSafeLoader],  Type[yaml.SafeLoader],
+        Type[yaml.CUnsafeLoader],  Type[yaml.UnsafeLoader],
+        Type[yaml.CFullLoader],  Type[yaml.FullLoader]
+    ] = SafeLoader
+        ) -> Generator[str, None, None]:
     """
     A generator for parsing a stream of events from a YAML file
     and translating it to HTML.
 
     Parameters:
-        str: str
-        loader: yaml.Loader = SafeLoader
+        stream: str
+        loader: one of yaml loader types, default SafeLoader
 
     Yields:
         str
@@ -128,24 +141,31 @@ def yaml2html(stream: str, loader=SafeLoader) -> Generator[str, None, None]:
             builder = HTMLBuilder()
 
 
-def main(files: List[str]) -> None:
+def main(files: List[str], loader: str) -> None:
     """
     Convert YAML file(s) to HTML.
 
     Parameters:
         files: List[str]
+        loader: str
 
     Returns:
         None
     """
+    loaders = {"safe": SafeLoader, "unsafe": UnsafeLoader, "full": FullLoader}
+
     if len(files) == 1:
         with open(files[0]) as yaml_file:
-            print("".join(yaml2html(yaml_file.read())))
+            text = yaml_file.read()
+            print("".join(yaml2html(text, loader=loaders[loader])))
     else:
         for filename in files:
             cprint(filename, attrs=["bold", "underline"])
             with open(filename) as yaml_file:
-                print(f"\n{''.join(yaml2html(yaml_file.read()))}\n")
+                text = yaml_file.read()
+                print(
+                    f"\n{''.join(yaml2html(text, loader=loaders[loader]))}\n"
+                    )
 
 
 if __name__ == "__main__":
@@ -154,5 +174,11 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("file", nargs="+", help="YAML file(s) to convert")
+
+    parser.add_argument(
+        "-l", "--loader", default="safe", choices=["safe", "unsafe", "full"],
+        help="a PyYAML loader to use, default is 'safe'"
+        )
+
     args = parser.parse_args()
-    main(args.file)
+    main(args.file, args.loader)
